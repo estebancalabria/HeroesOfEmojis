@@ -1,0 +1,90 @@
+import { Board } from "./board.js";
+import { TileColor } from "./tile.js";
+
+// Crear tablero 20x20
+const board = new Board(20, 20);
+
+// Agregar algunos emojis
+board.get(0, 0)!.emoji = "🌲";
+board.get(1, 0)!.emoji = "🌲";
+board.get(3, 2)!.emoji = "🌊";
+board.get(3, 3)!.emoji = "🌊";
+board.get(5, 5)!.emoji = "🏰";
+
+// Crear una laguna (4 tiles de agua)
+const waterTiles = [
+  [10, 10],
+  [10, 11],
+  [11, 10],
+  [11, 11],
+];
+for (const [x, y] of waterTiles) {
+  const t = board.get(x, y)!;
+  t.type = "water";
+  t.color = TileColor["water"];
+}
+
+/**
+ * Devuelve el fondo con gradientes solo en tierra que toca agua
+ */
+function getTileBackground(x: number, y: number): string {
+  const tile = board.get(x, y)!;
+  const base = tile.color;
+
+  // Solo aplicar a tierra o arena
+  if (tile.type !== "grass" && tile.type !== "sand") {
+    return base;
+  }
+
+  const dirs = [
+    [0, -1, "to top"], // norte
+    [0, 1, "to bottom"], // sur
+    [-1, 0, "to left"], // oeste
+    [1, 0, "to right"], // este
+  ];
+
+  const layers: string[] = [];
+
+  for (const [dx, dy, dir] of dirs) {
+    const neighbor = board.get(x + dx, y + dy);
+    if (!neighbor) continue;
+
+    // Si el vecino es agua, dibujar una fina franja en ese lado
+    if (neighbor.type === "water") {
+      const color = neighbor.color;
+      // franja delgada de agua (borde)
+      layers.push(`linear-gradient(${dir}, ${color} 0%, transparent 25%)`);
+    }
+  }
+
+  // Combinar capas (borde + color base)
+  return [...layers, base].join(", ");
+}
+
+/**
+ * Renderiza el tablero
+ */
+function renderBoard(containerId: string) {
+  const container = document.getElementById(containerId)!;
+  container.innerHTML = "";
+  container.style.gridTemplateColumns = `repeat(${board.width}, 38px)`;
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      const div = document.createElement("div");
+      div.className = "tile";
+
+      // 🎨 Fondo con bordes suaves
+      div.style.background = getTileBackground(tile.x, tile.y);
+      div.textContent = tile.emoji ?? "";
+
+      div.addEventListener("click", () => {
+        alert(`Coordenada: (${tile.x}, ${tile.y})`);
+      });
+
+      container.appendChild(div);
+    }
+  }
+}
+
+renderBoard("board");
