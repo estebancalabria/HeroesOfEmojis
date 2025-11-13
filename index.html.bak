@@ -1,0 +1,30 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Emoji Heroes</title>
+  <style>
+    body {
+      background: #20232a;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .tile:hover {
+      transform: scale(1.1);
+      filter: brightness(1.2);
+      outline: 1px solid rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <board-component></board-component>
+  <script type="module" src="./dist/main.js"></script>
+</body>
+</html>

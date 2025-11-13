@@ -1,0 +1,381 @@
+import { BoardComponent } from "./components/Board/Board.component.js";
+
+import { BoardModel } from "./models/board.model.js";
+import { TileModel, TileType, TileTypes } from "./models/tile.model.js";
+import { EmojisModel } from "./models/emojis.model.js";
+
+// Crear tablero 20x20
+const board = new BoardModel(20, 20);
+
+// Ejemplos de emojis
+board.get(0, 0)!.emoji = "🌲";
+board.get(1, 0)!.emoji = "🌲";
+
+const castleStartX = 5;
+const castleStartY = 5;
+const castleSize = 5; // Cambiado a 3
+const castleEmoji = "🏰";
+const castleGroupId = "Player_1_Castle";
+
+for (let y = castleStartY; y < castleStartY + castleSize; y++) {
+  for (let x = castleStartX; x < castleStartX + castleSize; x++) {
+    const tile = board.get(x, y);
+    if (tile) { // Asegurarse de que la coordenada esté dentro del tablero
+      tile.emoji = castleEmoji;
+      tile.groupId = castleGroupId;
+    }
+  }
+}
+
+
+// Crear una laguna (solo color, sin gradientes)
+const waterTiles: [number, number][] = [
+  [10, 10], [10, 11],
+  [11, 10], [11, 11]
+];
+for (const [x, y] of waterTiles) {
+  const t = board.get(x, y)!;
+  t.type = TileTypes.WATER;
+}
+
+/**
+ * Devuelve el color base del tile (sin efectos visuales)
+ */
+function getTileBackground(x: number, y: number): string {
+  const tile = board.get(x, y)!;
+  return tile.color;
+}
+
+
+/**
+ * Renderiza el tablero
+ */
+/**
+ * Renderiza el tablero
+ */
+
+// --- Nuevo método para dibujar flechas basado en el camino ---
+function drawArrowsForPath(
+  container: HTMLElement,
+  path: { x: number; y: number }[],
+  tileWidth: number = 38,
+  tileHeight: number = 38
+) {
+  // Limpiar flechas anteriores si existen
+  const existingArrowContainer = document.getElementById('arrows-overlay');
+  if (existingArrowContainer) {
+    container.removeChild(existingArrowContainer);
+  }
+
+  if (path.length === 0) return; // Si no hay camino, no hay nada que dibujar
+
+  const arrowContainer = document.createElement("div");
+  arrowContainer.id = "arrows-overlay";
+  arrowContainer.style.position = "absolute";
+  arrowContainer.style.top = "0";
+  arrowContainer.style.left = "0";
+  arrowContainer.style.width = "100%";
+  arrowContainer.style.height = "100%";
+  arrowContainer.style.pointerEvents = "none";
+  arrowContainer.style.zIndex = "10";
+
+  // Recorremos el camino, dibujando una flecha en la posición del punto ANTERIOR
+  // que apunta hacia el punto ACTUAL.
+  for (let i = 1; i < path.length; i++) { // Empezamos en 1, ya que necesitamos el punto anterior
+    const prevPoint = path[i - 1];
+    const currentPoint = path[i];
+
+    // Calcular la diferencia para determinar la dirección
+    const dx = currentPoint.x - prevPoint.x;
+    const dy = currentPoint.y - prevPoint.y;
+
+    let directionKey: string | null = null;
+    if (dx === 1 && dy === 0) {
+      directionKey = "RIGHT";
+    } else if (dx === -1 && dy === 0) {
+      directionKey = "LEFT";
+    } else if (dx === 0 && dy === -1) {
+      directionKey = "UP";
+    } else if (dx === 0 && dy === 1) {
+      directionKey = "DOWN";
+    } else if (dx === 1 && dy === -1) {
+      directionKey = "UP_RIGHT";
+    } else if (dx === 1 && dy === 1) {
+      directionKey = "DOWN_RIGHT";
+    } else if (dx === -1 && dy === 1) {
+      directionKey = "DOWN_LEFT";
+    } else if (dx === -1 && dy === -1) {
+      directionKey = "UP_LEFT";
+    } else {
+      // Si no coincide con una dirección cardinal/ordinal, se omite o se puede manejar como error
+      console.warn(`Dirección no reconocida entre (${prevPoint.x},${prevPoint.y}) y (${currentPoint.x},${currentPoint.y})`);
+      continue; // Saltar esta iteración si la dirección no es válida
+    }
+
+    // Crear el elemento de la flecha
+    const arrowTile = document.createElement("div");
+    arrowTile.style.position = "absolute";
+    arrowTile.style.width = `${tileWidth}px`;
+    arrowTile.style.height = `${tileHeight}px`;
+    // La flecha se dibuja en la posición del punto ANTERIOR
+    arrowTile.style.left = `${prevPoint.x * tileWidth}px`;
+    arrowTile.style.top = `${prevPoint.y * tileHeight}px`;
+    arrowTile.style.display = "flex";
+    arrowTile.style.alignItems = "center";
+    arrowTile.style.justifyContent = "center";
+    arrowTile.style.fontSize = "24px"; // Tamaño del emoji
+    arrowTile.style.color = "rgba(0, 0, 255, 0.7)"; // Color azul semitransparente
+    // Cambiamos la fuente para mejorar el renderizado del emoji
+    arrowTile.style.fontFamily = "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+    arrowTile.style.textAlign = "center";
+    arrowTile.style.lineHeight = `${tileHeight}px`;
+
+    // Asignar el emoji de flecha usando el mapa EmojisModel
+    const emoji = EmojisModel.DIRECTIONS[directionKey as keyof typeof EmojisModel.DIRECTIONS];
+    if (emoji) {
+      arrowTile.textContent = emoji; // <-- Aquí se asigna el emoji
+    } else {
+      // Esto no debería ocurrir si las claves son correctas, pero por si acaso
+      arrowTile.textContent = "?";
+    }
+
+    arrowContainer.appendChild(arrowTile);
+  }
+
+  container.appendChild(arrowContainer);
+}
+
+
+
+//container.appendChild(div);
+
+function renderBoard(containerId: string) {
+  const container = document.getElementById(containerId)!;
+  container.innerHTML = "";
+  container.style.gridTemplateColumns = `repeat(${board.width}, 38px)`;
+  container.style.position = "relative"; // Necesario para posicionar los grupos
+
+  // Paso 1: Agrupar tiles por groupId
+  const groups = new Map<string, { tiles: TileModel[]; min_x: number; max_x: number; min_y: number; max_y: number }>();
+
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      if (tile.groupId) {
+        if (!groups.has(tile.groupId)) {
+          groups.set(tile.groupId, {
+            tiles: [],
+            min_x: tile.x,
+            max_x: tile.x,
+            min_y: tile.y,
+            max_y: tile.y,
+          });
+        }
+        const group = groups.get(tile.groupId)!;
+        group.tiles.push(tile);
+        group.min_x = Math.min(group.min_x, tile.x);
+        group.max_x = Math.max(group.max_x, tile.x);
+        group.min_y = Math.min(group.min_y, tile.y);
+        group.max_y = Math.max(group.max_y, tile.y);
+      }
+    }
+  }
+
+  // Estado para la selección de puntos del camino
+  let selectedStartTile: { x: number; y: number } | null = null;
+  let pathElement: HTMLElement | null = null; // Para limpiar el camino anterior
+
+  // Paso 2: Renderizar tiles individuales (sin emoji si pertenecen a un grupo)
+  for (const row of board.tiles) {
+    for (const tile of row) {
+      const div = document.createElement("div");
+      div.className = "tile";
+
+      // Fondo plano según el color del tile
+      div.style.backgroundColor = getTileBackground(tile.x, tile.y);
+
+      // Si el tile tiene un groupId, NO mostramos su emoji aquí.
+      // El emoji lo mostraremos en el div del grupo.
+      if (!tile.groupId && tile.emoji) {
+        div.textContent = tile.emoji;
+      }
+
+
+
+      // ... dentro de renderBoard, reemplaza el listener por este:
+      /*div.addEventListener("click", () => {
+
+        const clickedX = tile.x;
+        const clickedY = tile.y;
+
+        if (selectedStartTile === null) {
+          selectedStartTile = { x: clickedX, y: clickedY };
+          console.log(`Punto de inicio seleccionado: (${clickedX}, ${clickedY})`);
+          return;
+        }
+
+        const start = selectedStartTile;
+        const goal = { x: clickedX, y: clickedY };
+
+        if (pathElement) {
+          container.removeChild(pathElement);
+          pathElement = null;
+        }
+
+        const transitableMatrix = board.getTransitableMatrix();
+        const path = board.aStar(transitableMatrix, start, goal);
+
+        if (path) {
+          console.log("Camino encontrado:", path);
+          const pathContainer = document.createElement("div");
+          pathContainer.id = "path-overlay";
+          pathContainer.style.position = "absolute";
+          pathContainer.style.top = "0";
+          pathContainer.style.left = "0";
+          pathContainer.style.width = "100%";
+          pathContainer.style.height = "100%";
+          pathContainer.style.pointerEvents = "none";
+
+          for (const point of path) {
+            const pathTile = document.createElement("div");
+            pathTile.style.position = "absolute";
+            pathTile.style.width = "38px";
+            pathTile.style.height = "38px";
+            pathTile.style.left = `${point.x * 38}px`;
+            pathTile.style.top = `${point.y * 38}px`;
+            pathTile.style.backgroundColor = "rgba(0, 255, 0, 0.5)";
+            pathTile.style.border = "1px solid rgba(0, 128, 0, 0.7)";
+            pathTile.style.boxSizing = "border-box";
+            pathContainer.appendChild(pathTile);
+          }
+
+          container.appendChild(pathContainer);
+          pathElement = pathContainer;
+        } else {
+          console.log("No se encontró un camino.");
+        }
+
+        selectedStartTile = null; // Reinicia la selección
+      });*/
+      // --- Modificar tu listener de click ---
+      div.addEventListener("click", () => {
+        const clickedX = tile.x;
+        const clickedY = tile.y;
+
+        if (selectedStartTile === null) {
+          selectedStartTile = { x: clickedX, y: clickedY };
+          console.log(`Punto de inicio seleccionado: (${clickedX}, ${clickedY})`);
+          return;
+        }
+
+        const start = selectedStartTile;
+        const goal = { x: clickedX, y: clickedY };
+
+        // Limpiar elementos de visualización anteriores (camino y flechas)
+        if (pathElement) {
+          container.removeChild(pathElement);
+          pathElement = null;
+        }
+        const existingArrowContainer = document.getElementById('arrows-overlay');
+        if (existingArrowContainer) {
+          container.removeChild(existingArrowContainer);
+        }
+
+        const transitableMatrix = board.getTransitableMatrix();
+        const path = board.aStar(transitableMatrix, start, goal); // Ahora devuelve PointModel[] | null
+
+        if (path && path.length > 0) {
+          console.log("Camino encontrado:", path);
+
+          // Dibujar flechas basadas en el camino
+          drawArrowsForPath(container, path);
+
+          // Opcional: Dibujar también los cuadrados del camino (puedes elegir no hacerlo)
+          // --- Código para dibujar el camino (comentado si solo quieres flechas) ---
+          /*
+          const pathContainer = document.createElement("div");
+          pathContainer.id = "path-overlay";
+          pathContainer.style.position = "absolute";
+          pathContainer.style.top = "0";
+          pathContainer.style.left = "0";
+          pathContainer.style.width = "100%";
+          pathContainer.style.height = "100%";
+          pathContainer.style.pointerEvents = "none";
+      
+          for (const point of path) {
+            const pathTile = document.createElement("div");
+            pathTile.style.position = "absolute";
+            pathTile.style.width = "38px";
+            pathTile.style.height = "38px";
+            pathTile.style.left = `${point.x * 38}px`;
+            pathTile.style.top = `${point.y * 38}px`;
+            pathTile.style.backgroundColor = "rgba(0, 255, 0, 0.5)";
+            pathTile.style.border = "1px solid rgba(0, 128, 0, 0.7)";
+            pathTile.style.boxSizing = "border-box";
+            pathContainer.appendChild(pathTile);
+          }
+      
+          container.appendChild(pathContainer);
+          pathElement = pathContainer;
+          */
+        } else {
+          console.log("No se encontró un camino.");
+          // Limpiar flechas si no hay camino
+          const existingArrowContainer = document.getElementById('arrows-overlay');
+          if (existingArrowContainer) {
+            container.removeChild(existingArrowContainer);
+          }
+        }
+
+        selectedStartTile = null; // Reinicia la selección
+      });
+
+      container.appendChild(div);
+    }
+  }
+
+  // Paso 3: Renderizar los grupos (cada grupo como un solo elemento grande)
+  groups.forEach((groupData, groupId) => {
+    // Asegurarnos de que todos los tiles del grupo tienen el mismo emoji
+    const firstEmoji = groupData.tiles[0].emoji;
+    if (!firstEmoji) return;
+
+    // Crear un div para el grupo
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "tile-group";
+    groupDiv.textContent = firstEmoji; // Mostrar solo un emoji para todo el grupo
+
+    // Calcular tamaño y posición
+    const width = (groupData.max_x - groupData.min_x + 1) * 38; // 38px es el ancho de cada celda
+    const height = (groupData.max_y - groupData.min_y + 1) * 38;
+    const left = groupData.min_x * 38;
+    const top = groupData.min_y * 38;
+
+    groupDiv.style.position = "absolute";
+    groupDiv.style.left = `${left}px`;
+    groupDiv.style.top = `${top}px`;
+    groupDiv.style.width = `${width}px`;
+    groupDiv.style.height = `${height}px`;
+    groupDiv.style.display = "flex";
+    groupDiv.style.alignItems = "center";
+    groupDiv.style.justifyContent = "center";
+    groupDiv.style.fontSize = `${Math.min(width, height) * 0.6}px`; // Escalar el emoji
+    groupDiv.style.pointerEvents = "none"; // Para que los clicks pasen al tile debajo
+
+    // --- ⛔️ SE HAN ELIMINADO ESTAS LÍNEAS ---
+    // groupDiv.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.4)";
+    // groupDiv.style.borderRadius = "2px";
+
+    container.appendChild(groupDiv);
+
+    // Opcional: hacer que el click en el grupo también funcione
+    // groupDiv.addEventListener("click", (e) => {
+    //   e.stopPropagation(); // Evitar que el click se propague a los tiles individuales
+    //   alert(`Grupo: ${groupId} en (${groupData.min_x},${groupData.min_y}) - (${groupData.max_x},${groupData.max_y})`);
+    // });
+  });
+}
+
+renderBoard("board");
+
+
+customElements.define("board-component", BoardComponent);
