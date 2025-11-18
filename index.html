@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <title>Emoji Heroes</title>
@@ -21,7 +22,7 @@
       background: #181a1f;
       padding: 4px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
       cursor: pointer;
     }
 
@@ -41,12 +42,25 @@
       filter: brightness(1.2);
       outline: 1px solid rgba(255, 255, 255, 0.4);
     }
+
+    .board-container {
+      width: 40em;
+      height: 40em;
+    }
   </style>
 </head>
+
 <body>
+  <div class="board-container">
     <board-component></board-component>
+  </div>
+
+
+
+
   <div id="board"></div>
   <!-- 👇 Cargamos solo el módulo compilado -->
   <script type="module" src="./dist/main.js"></script>
 </body>
+
 </html>

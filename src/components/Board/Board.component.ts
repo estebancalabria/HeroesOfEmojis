@@ -2,6 +2,8 @@
 import { BoardModel } from "../../models/board.model.js";
 import { EmojisModel } from "../../models/emojis.model.js";
 import { TileTypes } from "../../models/tile.model.js";
+import { enableDragScroll } from "./Board.drag-scroll.js";
+
 
 export class BoardComponent extends HTMLElement {
   private board: BoardModel;
@@ -45,12 +47,25 @@ export class BoardComponent extends HTMLElement {
     }
   }
 
-  connectedCallback(): void {
+  connectedCallback() {
     this.render();
+    const wrapper = this.querySelector("#board-wrapper") as HTMLElement;
+    if (wrapper) enableDragScroll(wrapper);
   }
+
 
   private render(): void {
     this.innerHTML = `
+  <div id="board-wrapper" style="
+      width:100%;
+      height:100%;
+      overflow:auto;
+      position:relative;
+
+      /* Scroll verde */
+      scrollbar-width: thin;
+      scrollbar-color: green transparent;
+  ">
       <div id="board-container" style="
         position: relative;
         display: grid;
@@ -60,10 +75,12 @@ export class BoardComponent extends HTMLElement {
         padding: 4px;
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        cursor: pointer;
+        cursor: grab;
       ">
       </div>
-    `;
+  </div>
+`;
+
     this.renderBoard();
 
   }
@@ -271,5 +288,7 @@ export class BoardComponent extends HTMLElement {
   static get observedAttributes(): string[] {
     return [];
   }
+
+
 }
 
